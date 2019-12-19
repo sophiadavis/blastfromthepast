@@ -151,7 +151,7 @@ if __name__ == "__main__":
     pictures = os.listdir(upload_dir)
     warning = ''
     if len(pictures) < 3:
-        warning = f'Warning: only {len(pictures) - 1} unsent photo(s) remaining! Please upload more!'
+        warning = f'Warning: only {len(pictures)} unsent photo(s) remaining! Please upload more!'
 
     picture_path = os.path.join(upload_dir, random.choice(pictures))
     if args.photo:
