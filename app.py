@@ -1,10 +1,9 @@
 from authlib.flask.client import OAuth
 import datetime
-from flask import Flask, flash, abort, get_flashed_messages, jsonify, request, redirect, url_for, send_from_directory
+from flask import Flask, flash, abort, get_flashed_messages, request, redirect, url_for, send_from_directory
 from flask_login import LoginManager, login_user, login_required, current_user
 import logging
-from loginpass import create_flask_blueprint
-from loginpass import Google
+from loginpass import Google, create_flask_blueprint
 import json
 import os
 from werkzeug.utils import secure_filename

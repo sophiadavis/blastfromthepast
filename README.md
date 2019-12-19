@@ -40,7 +40,7 @@ Email a randomly selected photo to a group of people
 
 optional arguments:
   -h, --help     show this help message and exit
-  --dryrun       Email a "dryrun" address, do not move the photo to the "sent" folder
+  --dryrun       Email "dryrun" addresses, do not move the photo to the "sent" folder
   --photo PHOTO  Send photo at this path, instead of a random selection
  ```
 ##### Suggested config:
