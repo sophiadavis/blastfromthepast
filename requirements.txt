@@ -1,0 +1,11 @@
+flask
+Authlib
+loginpass
+flask-login
+google-api-python-client
+oauth2client
+retry
+uwsgi
+redis
+jinja2
+pillow
