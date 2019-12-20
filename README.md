@@ -13,7 +13,7 @@ A flask app, which uses Oauth+Google for authentication (and redis for session m
 
 ##### Suggested config:
 ```
-### flask_app.py
+### flask_config.py
 FLASK_ENV = 'production'
 SECRET_KEY = 'FLASK_SECRET_KEY'
 GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_APP_OAUTH_CLIENT_ID'
