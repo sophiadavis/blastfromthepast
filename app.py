@@ -77,7 +77,7 @@ def handle_authorize(remote, token, user_info):
 
 
 bp = create_flask_blueprint(Google, oauth, handle_authorize)
-app.register_blueprint(bp, url_prefix='/google'))
+app.register_blueprint(bp, url_prefix='/google')
 
 
 @login_manager.user_loader
