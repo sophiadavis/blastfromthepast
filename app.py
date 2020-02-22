@@ -8,6 +8,7 @@ import json
 import os
 from werkzeug.utils import secure_filename
 import redis
+import time
 
 import sys
 sys.stdout = sys.stderr
@@ -85,6 +86,13 @@ class User:
         return self.email
 
 
+def _get_uniquified_name(filename, email):
+    base, extension = filename.split('.')
+    email_id = email.split('@')[0]
+    timestamp = int(time.time())
+    return f'{base}-{email_id}-{timestamp}.{extension}'
+
+
 def handle_authorize(remote, token, user_info):
     app.logger.info('User authorization request')
     user = User(token, user_info)
@@ -138,9 +146,10 @@ def upload_file():
             if photo and allowed_file(photo.filename):
                 app.logger.info(f'{current_user.email}: submitted {photo.filename}')
                 filename = secure_filename(photo.filename)
-                photo.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                uniquified_name = _get_uniquified_name(filename, current_user.email)
+                photo.save(os.path.join(app.config['UPLOAD_FOLDER'], uniquified_name))
                 app.logger.info(f'{current_user.email}: submitted {photo.filename} ; save successful')
-        return redirect(url_for('success', filename=filename))
+        return redirect(url_for('success', filename=uniquified_name))
     messages = [m for m in get_flashed_messages() if not m.startswith('Please log in')]
     message_to_show = ''
     if messages:
