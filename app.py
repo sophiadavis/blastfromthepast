@@ -19,10 +19,30 @@ logging.basicConfig(level=logging.INFO,
 
 ALLOWED_EXTENSIONS = set(['pdf', 'png', 'jpg', 'jpeg', 'gif'])
 
-html_template = '''
+html_head = '''
 <!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<head></head>
+<head>
+<script type="text/javascript">
+  function checkFileSize(event) {
+    var uploadSelection = document.getElementById("photos");
+    if (uploadSelection.files.length > 0) {
+      var totalSize = 0;
+      for (var i = 0; i < uploadSelection.files.length; i++) {
+        totalSize += uploadSelection.files[i].size;
+      }
+      if (totalSize > 1000**3) {
+        // nginx client_max_body_size is set to 1000M
+        alert('Uploads must be less than 1Gb. Your files are: '+ (totalSize / 1000**3) + ' Gb');
+        return false;
+      }
+    }
+  return true;
+  }
+</script>
+</head>
+'''
+html_body_template = '''
 <body style="background-color:steelblue; font-family:Courier New, monospace; text-align:center;">
 {content}
 </body>
@@ -128,13 +148,14 @@ def upload_file():
     content = f'''
     <title>Upload new photos</title>
     <h1>Upload new photos</h1>
+    <h4>**headsup, 1Gb max upload size**</h4>
     <div>{message_to_show}</div>
-    <form method=post enctype=multipart/form-data>
-      <input type="file" name="photos" accept="image/*" multiple>
+    <form method="POST" enctype="multipart/form-data" onsubmit="return checkFileSize(event)" id="uploadForm">
+      <input type="file" name="photos" accept="image/*" id="photos" multiple>
       <input type="submit" value="Click to upload!">
     </form>
     '''
-    return html_template.format(content=content)
+    return html_head + html_body_template.format(content=content)
 
 
 @app.route('/success/<filename>')
@@ -148,7 +169,7 @@ def success(filename):
     <img src="{uploaded_path}" alt="Yay!" height="250">
     <h1><a href="{upload_url}">Submit more!</a></h1>
     '''
-    return html_template.format(content=content)
+    return html_head + html_body_template.format(content=content)
 
 
 @app.route('/privacy')
