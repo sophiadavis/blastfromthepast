@@ -1,6 +1,6 @@
-from authlib.flask.client import OAuth
+from authlib.integrations.flask_client import OAuth
 import datetime
-from flask import Flask, flash, abort, get_flashed_messages, request, redirect, url_for, send_from_directory
+from flask import Flask, flash, abort, get_flashed_messages, request, redirect, render_template, url_for, send_from_directory
 from flask_login import LoginManager, login_user, login_required, current_user
 import logging
 from loginpass import Google, create_flask_blueprint
@@ -20,37 +20,11 @@ logging.basicConfig(level=logging.INFO,
 
 ALLOWED_EXTENSIONS = set(['pdf', 'png', 'jpg', 'jpeg', 'gif'])
 
-html_head = '''
-<!doctype html>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<head>
-<script type="text/javascript">
-  function checkFileSize(event) {
-    var uploadSelection = document.getElementById("photos");
-    if (uploadSelection.files.length > 0) {
-      var totalSize = 0;
-      for (var i = 0; i < uploadSelection.files.length; i++) {
-        totalSize += uploadSelection.files[i].size;
-      }
-      if (totalSize > 1000**3) {
-        // nginx client_max_body_size is set to 1000M
-        alert('Uploads must be less than 1Gb. Your files are: '+ (totalSize / 1000**3) + ' Gb');
-        return false;
-      }
-    }
-  return true;
-  }
-</script>
-</head>
-'''
-html_body_template = '''
-<body style="background-color:steelblue; font-family:Courier New, monospace; text-align:center;">
-{content}
-</body>
-'''
-
 app = Flask(__name__)
 app.config.from_pyfile('flask_config.py')
+
+
+current_user = 'sophia'
 
 
 login_manager = LoginManager()
@@ -130,55 +104,42 @@ def page_not_found(e):
 
 
 @app.route('/', methods=['GET', 'POST'])
-@login_required
+#@login_required
 def upload_file():
     if request.method == 'POST':
-        if 'photos' not in request.files:
+        if 'image_uploads' not in request.files:
             flash('Please select some photos')
-            app.logger.info(f'{current_user.email}: submission did not include a file')
+            app.logger.info(f'{current_user}: submission did not include a file')
             return redirect(request.url)
         photos = request.files
-        for photo in request.files.getlist('photos'):
+        app.logger.info('HERE1')
+        for photo in request.files.getlist('image_uploads'):
+            app.logger.info('HERE2')
             if photo.filename == '':
                 flash('Please select some photos')
-                app.logger.info(f'{current_user.email}: filename was empty')
+                app.logger.info(f'{current_user}: filename was empty')
                 return redirect(request.url)
             if photo and allowed_file(photo.filename):
-                app.logger.info(f'{current_user.email}: submitted {photo.filename}')
+                app.logger.info(f'{current_user}: submitted {photo.filename}')
                 filename = secure_filename(photo.filename)
-                uniquified_name = _get_uniquified_name(filename, current_user.email)
+                uniquified_name = _get_uniquified_name(filename, current_user)
                 photo.save(os.path.join(app.config['UPLOAD_FOLDER'], uniquified_name))
-                app.logger.info(f'{current_user.email}: submitted {photo.filename} ; save successful')
-        return redirect(url_for('success', filename=uniquified_name))
+                app.logger.info(f'{current_user}: submitted {photo.filename} ; save successful')
+        return redirect(url_for('success'))
+    app.logger.info('HERE3')
     messages = [m for m in get_flashed_messages() if not m.startswith('Please log in')]
     message_to_show = ''
     if messages:
         message_to_show = messages[0]
-    content = f'''
-    <title>Upload new photos</title>
-    <h1>Upload new photos</h1>
-    <h4>**headsup, 1Gb max upload size**</h4>
-    <div>{message_to_show}</div>
-    <form method="POST" enctype="multipart/form-data" onsubmit="return checkFileSize(event)" id="uploadForm">
-      <input type="file" name="photos" accept="image/*" id="photos" multiple>
-      <input type="submit" value="Click to upload!">
-    </form>
-    '''
-    return html_head + html_body_template.format(content=content)
+    return render_template('uploads.html')
 
 
-@app.route('/success/<filename>')
-@login_required
-def success(filename):
-    uploaded_path = url_for('uploaded_file', filename=filename)
-    upload_url = url_for('upload_file')
-    content = f'''
-    <title>Thanks for submitting!</title>
-    <h1>Submissions successful.</h1>
-    <img src="{uploaded_path}" alt="Yay!" height="250">
-    <h1><a href="{upload_url}">Submit more!</a></h1>
-    '''
-    return html_head + html_body_template.format(content=content)
+@app.route('/success')
+#@login_required
+def success():
+    # uploaded_path = url_for('uploaded_file', filename=filename)
+    # upload_url = url_for('upload_file')
+    return render_template('success.html')
 
 
 @app.route('/privacy')
@@ -188,7 +149,7 @@ def privacy():
 
 
 @app.route('/uploads/<filename>')
-@login_required
+# @login_required
 def uploaded_file(filename):
     if os.path.exists(os.path.join(app.config['UPLOAD_FOLDER'], filename)):
         return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
@@ -196,6 +157,6 @@ def uploaded_file(filename):
 
 
 @app.route('/favicon.ico')
-@login_required
+# @login_required
 def favicon():
-    return send_from_directory(app.config['FAVICON'], 'calvin-favicon.jpg')
+    return ''
