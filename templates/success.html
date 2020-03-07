@@ -1,1 +1,69 @@
-YES
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Upload new photos</title>
+  <meta charset="utf-8" name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <style>
+    html {
+      background-color:steelblue;
+      font-family: Courier New, monospace;
+    }
+
+    form {
+      width: 600px;
+      background: #ccc;
+      margin: 0 auto;
+      padding: 20px;
+      border: 1px solid black;
+    }
+
+    form ol {
+      padding-left: 0;
+    }
+
+    form li, div > p {
+      background: #eee;
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      list-style-type: none;
+      border: 1px solid black;
+    }
+
+    form img {
+      height: 64px;
+      order: 1;
+    }
+
+    form p {
+      line-height: 32px;
+      padding-left: 10px;
+    }
+
+    form label, form button {
+      background-color: #7F9CCB;
+      padding: 5px 10px;
+      border-radius: 5px;
+      border: 1px ridge black;
+      font-size: 0.8rem;
+      height: auto;
+    }
+
+    form label:hover, form button:hover {
+      background-color: #2D5BA3;
+      color: white;
+    }
+
+    form label:active, form button:active {
+      background-color: #0D3F8F;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <title>Thanks for submitting!</title>
+    <h1>Submissions successful.</h1>
+    <img src="{{ uploaded_path }}" alt="Yay!" height="250">
+    <h1><a href="{{ upload_url }}">Submit more!</a></h1>
+</body>
+</html>

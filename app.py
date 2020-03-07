@@ -13,6 +13,11 @@ import time
 import sys
 sys.stdout = sys.stderr
 
+## todo 
+# success -- loop through all photos
+# remove photos when click "remove"
+# clean up flash
+
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     filename=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'log', f'{datetime.date.today()}-uploadserver.log'),
@@ -112,9 +117,7 @@ def upload_file():
             app.logger.info(f'{current_user}: submission did not include a file')
             return redirect(request.url)
         photos = request.files
-        app.logger.info('HERE1')
         for photo in request.files.getlist('image_uploads'):
-            app.logger.info('HERE2')
             if photo.filename == '':
                 flash('Please select some photos')
                 app.logger.info(f'{current_user}: filename was empty')
@@ -125,21 +128,20 @@ def upload_file():
                 uniquified_name = _get_uniquified_name(filename, current_user)
                 photo.save(os.path.join(app.config['UPLOAD_FOLDER'], uniquified_name))
                 app.logger.info(f'{current_user}: submitted {photo.filename} ; save successful')
-        return redirect(url_for('success'))
-    app.logger.info('HERE3')
-    messages = [m for m in get_flashed_messages() if not m.startswith('Please log in')]
-    message_to_show = ''
-    if messages:
-        message_to_show = messages[0]
-    return render_template('uploads.html')
+        return redirect(url_for('success', filename=uniquified_name))
+    # messages = [m for m in get_flashed_messages() if not m.startswith('Please log in')]
+    # message_to_show = ''
+    # if messages:
+    #     message_to_show = messages[0]
+    return render_template('upload.html', messages=get_flashed_messages())
 
 
-@app.route('/success')
+@app.route('/success/<filename>')
 #@login_required
-def success():
-    # uploaded_path = url_for('uploaded_file', filename=filename)
-    # upload_url = url_for('upload_file')
-    return render_template('success.html')
+def success(filename):
+    uploaded_path = url_for('uploaded_file', filename=filename)
+    upload_url = url_for('upload_file')
+    return render_template('success.html', uploaded_path=uploaded_path, upload_url=upload_url)
 
 
 @app.route('/privacy')

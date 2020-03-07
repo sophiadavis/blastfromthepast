@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Complete file example</title>
-  <meta charset="utf-8"/>
+  <title>Upload new photos</title>
+  <meta charset="utf-8" name="viewport" content="width=device-width, initial-scale=1.0"/>
   <style>
     html {
-      font-family: sans-serif;
+      background-color:steelblue;
+      font-family: Courier New, monospace;
     }
 
     form {
@@ -63,10 +64,16 @@
   <form method="POST" enctype="multipart/form-data">
     <div>
       <label for="image_uploads">Choose images to upload (PNG, JPG)</label>
-      <input type="file" id="image_uploads" name="image_uploads" accept=".jpg, .jpeg, .png" multiple>
-      <!-- <input type="file" name="photos" accept="image/*" id="photos" multiple> -->
+      <input type="file" id="image_uploads" name="image_uploads" accept="image/*" multiple>
     </div>
     <div class="preview">
+      {% if messages %}
+        <ol>
+          {% for message in messages %}
+            <li>{{ message }}</li>
+          {% endfor %}
+        </ol>
+      {% endif %}
       <p>No files currently selected for upload</p>
     </div>
     <div>
@@ -125,6 +132,7 @@
 
           list.appendChild(listItem);
         }
+        // (totalSize > 1000**3)
         overviewText.textContent = `Total upload size is ${returnFileSize(totalSize)}`;
       }
     }
