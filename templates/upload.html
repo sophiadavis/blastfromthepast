@@ -120,6 +120,7 @@
       if(curFiles.length === 0) {
         document.querySelector('.select').hidden = false;
         overviewText.textContent = 'No files currently selected for upload';
+        document.querySelector('.confirm').hidden = true;
       } else {
         document.querySelector('.select').hidden = true;
         let totalSize = 0;
