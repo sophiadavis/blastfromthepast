@@ -14,15 +14,9 @@ import sys
 sys.stdout = sys.stderr
 
 ## todo 
-# clean up flash
 # clean up old redis keys?
-# don't break if multiple dots in filename
 # check if image already present
-# make it prettier
 # if any single file fails upload, don't break the others
-# pdf?
-# remove "select" button if there are pictures selected
-# "base" template
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
@@ -72,7 +66,7 @@ class User:
 
 
 def _get_uniquified_name(filename, email):
-    base, extension = filename.split('.')
+    base, extension = filename.rsplit('.', 1)
     email_id = email.split('@')[0]
     timestamp = int(time.time())
     return f'{base}-{email_id}-{timestamp}.{extension}'
@@ -132,6 +126,7 @@ def upload_file():
                 app.logger.info(f'{current_user}: submitted {photo}, skipping')
         save_key = f'{current_user}-{time.time()}'
         redis_client.set(save_key, json.dumps([f for f in saved_files]))
+        redis_client.expire(save_key, 60*60*24*7)
         return redirect(url_for('success', save_key=save_key))
     return render_template('upload.html', font_awesome_cdn=app.config['FONT_AWESOME_CDN'])
 
