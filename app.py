@@ -13,10 +13,6 @@ import time
 import sys
 sys.stdout = sys.stderr
 
-## todo 
-# check if image already present
-# if any single file fails upload, don't break the others
-
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     filename=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'log', f'{datetime.date.today()}-uploadserver.log'),
@@ -26,9 +22,6 @@ ALLOWED_EXTENSIONS = set(['pdf', 'png', 'jpg', 'jpeg', 'pjpeg'])
 
 app = Flask(__name__)
 app.config.from_pyfile('flask_config.py')
-
-
-current_user = 'sophia'
 
 
 login_manager = LoginManager()
@@ -64,11 +57,10 @@ class User:
         return self.email
 
 
-def _get_uniquified_name(filename, email):
+def _get_uniquified_name(filename, user_id):
     base, extension = filename.rsplit('.', 1)
-    email_id = email.split('@')[0]
     timestamp = int(time.time())
-    return f'{base}-{email_id}-{timestamp}.{extension}'
+    return f'{base}-{user_id}-{timestamp}.{extension}'
 
 
 def handle_authorize(remote, token, user_info):
@@ -108,27 +100,28 @@ def page_not_found(e):
 
 
 @app.route('/', methods=['GET', 'POST'])
-#@login_required
+@login_required
 def upload_file():
+    user_id = email.split('@')[0]
     if request.method == 'POST':
         photos = request.files
         saved_files = []
         for photo in request.files.getlist('image_uploads'):
             if photo and allowed_file(photo.filename):
                 try:
-                    app.logger.info(f'{current_user}: submitted {photo.filename}')
+                    app.logger.info(f'{user_id}: submitted {photo.filename}')
                     filename = secure_filename(photo.filename)
-                    uniquified_name = _get_uniquified_name(filename, current_user)
+                    uniquified_name = _get_uniquified_name(filename, user_id)
                     photo.save(os.path.join(app.config['UPLOAD_FOLDER'], uniquified_name))
-                    app.logger.info(f'{current_user}: submitted {photo.filename} ; save successful')
+                    app.logger.info(f'{user_id}: submitted {photo.filename} ; save successful')
                     saved_files.append(uniquified_name)
                 except Exception as e:
-                    message = f'Failed to save {photo.filename}'
+                    message = f'{user_id}: failed to save {photo.filename}'
                     flash(message)
                     app.logger.exception(message)
             else:
-                app.logger.info(f'{current_user}: submitted {photo}, skipping')
-        save_key = f'{current_user}-{time.time()}'
+                app.logger.info(f'{user_id}: submitted {photo}, skipping')
+        save_key = f'{user_id}-{time.time()}'
         redis_client.set(save_key, json.dumps([f for f in saved_files]))
         redis_client.expire(save_key, 60*60*24*7)
         return redirect(url_for('success', save_key=save_key))
@@ -136,7 +129,7 @@ def upload_file():
 
 
 @app.route('/success/<save_key>')
-#@login_required
+@login_required
 def success(save_key):
     uploaded_files = json.loads(redis_client.get(save_key))
     links_to_uploads = [url_for('uploaded_file', filename=f) for f in uploaded_files]
@@ -147,7 +140,7 @@ def success(save_key):
 
 
 @app.route('/uploads/<filename>')
-# @login_required
+@login_required
 def uploaded_file(filename):
     if os.path.exists(os.path.join(app.config['UPLOAD_FOLDER'], filename)):
         return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
@@ -155,6 +148,6 @@ def uploaded_file(filename):
 
 
 @app.route('/favicon.ico')
-# @login_required
+@login_required
 def favicon():
-    return ''
+    return send_from_directory(app.config['FAVICON'], 'favicon.jpg')
