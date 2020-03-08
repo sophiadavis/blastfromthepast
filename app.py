@@ -1,4 +1,4 @@
-from authlib.integrations.flask_client import OAuth
+from authlib.flask.client import OAuth
 import datetime
 from flask import Flask, flash, abort, get_flashed_messages, request, redirect, render_template, url_for, send_from_directory
 from flask_login import LoginManager, login_user, login_required, current_user
@@ -102,7 +102,7 @@ def page_not_found(e):
 @app.route('/', methods=['GET', 'POST'])
 @login_required
 def upload_file():
-    user_id = email.split('@')[0]
+    user_id = current_user.email.split('@')[0]
     if request.method == 'POST':
         photos = request.files
         saved_files = []

@@ -1,5 +1,5 @@
 flask
-Authlib
+Authlib==0.11
 loginpass
 flask-login
 google-api-python-client
