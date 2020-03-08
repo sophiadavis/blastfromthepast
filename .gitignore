@@ -3,5 +3,5 @@ __pycache__*
 *pyc
 *log*
 *uwsgi.*
-*calvin-favicon-dir*
+*favicon-dir*
 client_secret*
