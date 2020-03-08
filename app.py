@@ -118,17 +118,9 @@ def page_not_found(e):
 #@login_required
 def upload_file():
     if request.method == 'POST':
-        if 'image_uploads' not in request.files:
-            flash('Please select some photos')
-            app.logger.info(f'{current_user}: submission did not include a file')
-            return redirect(request.url)
         photos = request.files
         saved_files = []
         for photo in request.files.getlist('image_uploads'):
-            if photo.filename == '':
-                flash('Please select some photos')
-                app.logger.info(f'{current_user}: filename was empty')
-                return redirect(request.url)
             if photo and allowed_file(photo.filename):
                 app.logger.info(f'{current_user}: submitted {photo.filename}')
                 filename = secure_filename(photo.filename)
@@ -136,12 +128,12 @@ def upload_file():
                 photo.save(os.path.join(app.config['UPLOAD_FOLDER'], uniquified_name))
                 app.logger.info(f'{current_user}: submitted {photo.filename} ; save successful')
                 saved_files.append(uniquified_name)
+            else:
+                app.logger.info(f'{current_user}: submitted {photo}, skipping')
         save_key = f'{current_user}-{time.time()}'
         redis_client.set(save_key, json.dumps([f for f in saved_files]))
         return redirect(url_for('success', save_key=save_key))
-    return render_template('upload.html',
-                           messages=get_flashed_messages(),
-                           font_awesome_cdn=app.config['FONT_AWESOME_CDN'])
+    return render_template('upload.html', font_awesome_cdn=app.config['FONT_AWESOME_CDN'])
 
 
 @app.route('/success/<save_key>')

@@ -87,15 +87,6 @@
       <label for="image_uploads">Select images</label>
       <input type="file" id="image_uploads" name="image_uploads" accept="image/*" multiple>
     </div>
-    <div>
-      {% if messages %}
-        <ul>
-          {% for message in messages %}
-            <li>{{ message }}</li>
-          {% endfor %}
-        </ul>
-      {% endif %}
-    </div>
     <div class="confirm" hidden="true">
       <label for="submit">Click to upload!</label>
       <input type="submit" id="submit" hidden="true">
