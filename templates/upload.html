@@ -25,13 +25,14 @@
       background: #eee;
       display: flex;
       justify-content: space-between;
+      align-items: center;
       margin-bottom: 10px;
       list-style-type: none;
       border: 1px solid black;
     }
 
     form img {
-      height: 64px;
+      height: 128px;
       order: 1;
     }
 
@@ -47,6 +48,7 @@
       border: 1px ridge black;
       font-size: 0.8rem;
       height: auto;
+      line-height: 40px;
     }
 
     form label:hover, form button:hover {
@@ -58,26 +60,47 @@
       background-color: #0D3F8F;
       color: white;
     }
+
+    .great {
+      color: green;
+    }
+
+    .angry {
+      color: #da0e0e;
+    }
+
+    .left {
+      float: left;
+      padding-right: 10px;
+    }
+
+    .fa-trash-o {
+      padding-left: 25px;
+    }
   </style>
+  <script src="{{ font_awesome_cdn }}"></script>
 </head>
 <body>
   <form method="POST" enctype="multipart/form-data">
-    <div>
-      <label for="image_uploads">Choose images to upload (PNG, JPG)</label>
+    <h1>Upload new photos</h1>
+    <div class="select">
+      <label for="image_uploads">Select images</label>
       <input type="file" id="image_uploads" name="image_uploads" accept="image/*" multiple>
     </div>
-    <div class="preview">
+    <div>
       {% if messages %}
-        <ol>
+        <ul>
           {% for message in messages %}
             <li>{{ message }}</li>
           {% endfor %}
-        </ol>
+        </ul>
       {% endif %}
-      <p>No files currently selected for upload</p>
     </div>
-    <div>
-      <input type="submit" value="Click to upload!">
+    <div class="confirm" hidden="true">
+      <label for="submit">Click to upload!</label>
+      <input type="submit" id="submit" hidden="true">
+    </div>
+    <div class="preview">
     </div>
   </form>
   <script>
@@ -94,32 +117,53 @@
       }
 
       const curFiles = input.files;
+
+      const overview = document.createDocumentFragment();
+      const overviewIcon = document.createElement('span');
+      overview.appendChild(overviewIcon);
       const overviewText = document.createElement('p');
-      preview.appendChild(overviewText);
+      overview.appendChild(overviewText);
+
+      preview.appendChild(overview);
       if(curFiles.length === 0) {
+        document.querySelector('.select').hidden = false;
         overviewText.textContent = 'No files currently selected for upload';
       } else {
-        var totalSize = 0;
+        document.querySelector('.select').hidden = true;
+        let totalSize = 0;
         const list = document.createElement('ol');
         preview.appendChild(list);
 
-        for(const file of curFiles) {
+        for (const file of curFiles) {
           const listItem = document.createElement('li');
           const para = document.createElement('p');
 
-          if(validFileType(file)) {
+          if (validFileType(file)) {
             totalSize += file.size;
 
             para.textContent = `${file.name} (${returnFileSize(file.size)})`;
             const image = document.createElement('img');
             image.src = URL.createObjectURL(file);
             
-            const remove = document.createElement('p');
-            remove.textContent = '(remove)';
+            const remove = document.createElement('div');
+            const removeIcon = document.createElement('div');
+            removeIcon.className = 'fa fa-trash-o fa-2x';
+            const removeText = document.createElement('div');
+            removeText.textContent = '(remove)';
+            remove.appendChild(removeIcon);
+            remove.appendChild(removeText);
+            remove.className = 'angry';
             remove.addEventListener('click', removeFromSelection);
 
             function removeFromSelection() {
-                console.log(`Removing ${file} from ${input.files}`);
+                const upload = new DataTransfer();
+                for (const f of curFiles) {
+                  if (f.name != file.name) {
+                    upload.items.add(f);
+                  }
+                }
+                input.files = upload.files;
+                input.dispatchEvent(new Event('change'));
             }
 
             listItem.appendChild(image);
@@ -132,13 +176,24 @@
 
           list.appendChild(listItem);
         }
-        // (totalSize > 1000**3)
-        overviewText.textContent = `Total upload size is ${returnFileSize(totalSize)}`;
+        if (totalSize < 10000000) {
+          overviewIcon.className = 'fa fa-check-circle fa-2x left great';
+          overviewText.textContent = `Total upload size is ${returnFileSize(totalSize)}`;
+          overviewText.className = 'great'
+          document.querySelector('.confirm').hidden = false;
+        }
+        else {
+          overviewIcon.className = 'fa fa-exclamation-circle fa-2x left angry';
+          overviewText.textContent = `Upload size: ${returnFileSize(totalSize)} (max 1Gb). Please remove some files.`;
+          overviewText.className = 'angry';
+          document.querySelector('.confirm').hidden = true;
+        }
       }
     }
 
     const fileTypes = [
       'image/jpeg',
+      'image/jpg',
       'image/pjpeg',
       'image/png'
     ];

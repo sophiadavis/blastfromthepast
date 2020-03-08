@@ -14,16 +14,22 @@ import sys
 sys.stdout = sys.stderr
 
 ## todo 
-# success -- loop through all photos
-# remove photos when click "remove"
 # clean up flash
+# clean up old redis keys?
+# don't break if multiple dots in filename
+# check if image already present
+# make it prettier
+# if any single file fails upload, don't break the others
+# pdf?
+# remove "select" button if there are pictures selected
+# "base" template
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     filename=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'log', f'{datetime.date.today()}-uploadserver.log'),
                     filemode='a')
 
-ALLOWED_EXTENSIONS = set(['pdf', 'png', 'jpg', 'jpeg', 'gif'])
+ALLOWED_EXTENSIONS = set(['pdf', 'png', 'jpg', 'jpeg'])
 
 app = Flask(__name__)
 app.config.from_pyfile('flask_config.py')
@@ -117,6 +123,7 @@ def upload_file():
             app.logger.info(f'{current_user}: submission did not include a file')
             return redirect(request.url)
         photos = request.files
+        saved_files = []
         for photo in request.files.getlist('image_uploads'):
             if photo.filename == '':
                 flash('Please select some photos')
@@ -128,20 +135,23 @@ def upload_file():
                 uniquified_name = _get_uniquified_name(filename, current_user)
                 photo.save(os.path.join(app.config['UPLOAD_FOLDER'], uniquified_name))
                 app.logger.info(f'{current_user}: submitted {photo.filename} ; save successful')
-        return redirect(url_for('success', filename=uniquified_name))
-    # messages = [m for m in get_flashed_messages() if not m.startswith('Please log in')]
-    # message_to_show = ''
-    # if messages:
-    #     message_to_show = messages[0]
-    return render_template('upload.html', messages=get_flashed_messages())
+                saved_files.append(uniquified_name)
+        save_key = f'{current_user}-{time.time()}'
+        redis_client.set(save_key, json.dumps([f for f in saved_files]))
+        return redirect(url_for('success', save_key=save_key))
+    return render_template('upload.html',
+                           messages=get_flashed_messages(),
+                           font_awesome_cdn=app.config['FONT_AWESOME_CDN'])
 
 
-@app.route('/success/<filename>')
+@app.route('/success/<save_key>')
 #@login_required
-def success(filename):
-    uploaded_path = url_for('uploaded_file', filename=filename)
+def success(save_key):
+    uploaded_files = json.loads(redis_client.get(save_key))
+    links_to_uploads = [url_for('uploaded_file', filename=f) for f in uploaded_files]
+    app.logger.info(links_to_uploads)
     upload_url = url_for('upload_file')
-    return render_template('success.html', uploaded_path=uploaded_path, upload_url=upload_url)
+    return render_template('success.html', uploads=links_to_uploads, upload_url=upload_url)
 
 
 @app.route('/privacy')
