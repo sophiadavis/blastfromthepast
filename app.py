@@ -63,6 +63,10 @@ def _get_uniquified_name(filename, user_id):
     return f'{base}-{user_id}-{timestamp}.{extension}'
 
 
+def _filter_flash(messages):
+    return [m for m in messages if 'log in' not in m]
+
+
 def handle_authorize(remote, token, user_info):
     app.logger.info('User authorization request')
     user = User(token, user_info)
@@ -135,7 +139,7 @@ def success(save_key):
     links_to_uploads = [url_for('uploaded_file', filename=f) for f in uploaded_files]
     app.logger.info(links_to_uploads)
     upload_url = url_for('upload_file')
-    return render_template('success.html', messages=get_flashed_messages(),
+    return render_template('success.html', messages=_filter_flash(get_flashed_messages()),
                            uploads=links_to_uploads, upload_url=upload_url)
 
 
