@@ -29,7 +29,7 @@ logging.basicConfig(level=logging.INFO,
                     filename=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'log', f'{datetime.date.today()}-uploadserver.log'),
                     filemode='a')
 
-ALLOWED_EXTENSIONS = set(['pdf', 'png', 'jpg', 'jpeg'])
+ALLOWED_EXTENSIONS = set(['pdf', 'png', 'jpg', 'jpeg', 'pjpeg'])
 
 app = Flask(__name__)
 app.config.from_pyfile('flask_config.py')

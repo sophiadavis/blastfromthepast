@@ -85,7 +85,7 @@
     <h1>Upload new photos</h1>
     <div class="select">
       <label for="image_uploads">Select images</label>
-      <input type="file" id="image_uploads" name="image_uploads" accept="image/*" multiple>
+      <input type="file" id="image_uploads" name="image_uploads" accept="image/*, application/pdf" multiple>
     </div>
     <div class="confirm" hidden="true">
       <label for="submit">Click to upload!</label>
@@ -186,7 +186,8 @@
       'image/jpeg',
       'image/jpg',
       'image/pjpeg',
-      'image/png'
+      'image/png',
+      'application/pdf',
     ];
 
     function validFileType(file) {
