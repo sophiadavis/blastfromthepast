@@ -14,7 +14,6 @@ import sys
 sys.stdout = sys.stderr
 
 ## todo 
-# clean up old redis keys?
 # check if image already present
 # if any single file fails upload, don't break the others
 
@@ -116,12 +115,17 @@ def upload_file():
         saved_files = []
         for photo in request.files.getlist('image_uploads'):
             if photo and allowed_file(photo.filename):
-                app.logger.info(f'{current_user}: submitted {photo.filename}')
-                filename = secure_filename(photo.filename)
-                uniquified_name = _get_uniquified_name(filename, current_user)
-                photo.save(os.path.join(app.config['UPLOAD_FOLDER'], uniquified_name))
-                app.logger.info(f'{current_user}: submitted {photo.filename} ; save successful')
-                saved_files.append(uniquified_name)
+                try:
+                    app.logger.info(f'{current_user}: submitted {photo.filename}')
+                    filename = secure_filename(photo.filename)
+                    uniquified_name = _get_uniquified_name(filename, current_user)
+                    photo.save(os.path.join(app.config['UPLOAD_FOLDER'], uniquified_name))
+                    app.logger.info(f'{current_user}: submitted {photo.filename} ; save successful')
+                    saved_files.append(uniquified_name)
+                except Exception as e:
+                    message = f'Failed to save {photo.filename}'
+                    flash(message)
+                    app.logger.exception(message)
             else:
                 app.logger.info(f'{current_user}: submitted {photo}, skipping')
         save_key = f'{current_user}-{time.time()}'
@@ -138,13 +142,8 @@ def success(save_key):
     links_to_uploads = [url_for('uploaded_file', filename=f) for f in uploaded_files]
     app.logger.info(links_to_uploads)
     upload_url = url_for('upload_file')
-    return render_template('success.html', uploads=links_to_uploads, upload_url=upload_url)
-
-
-@app.route('/privacy')
-# @login_required
-def privacy():
-    return 'Everything on this site is private.'
+    return render_template('success.html', messages=get_flashed_messages(),
+                           uploads=links_to_uploads, upload_url=upload_url)
 
 
 @app.route('/uploads/<filename>')

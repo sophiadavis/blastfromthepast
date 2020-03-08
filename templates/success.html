@@ -17,6 +17,10 @@
       border: 1px solid black;
     }
 
+    div.submissions {
+      border: 10px dotted green;
+    }
+
     img {
       height: 200px;
     }
@@ -27,16 +31,24 @@
 </head>
 <body>
   <title>Thanks for submitting!</title>
-  {% if uploads %}
   <div class="preview">
-    <h1>Submissions successful:</h1>
-    <ul>
-      {% for upload in uploads %}
-        <li><img src="{{ upload }}" height="250"></li>
-      {% endfor %}
-    </ul>
-  <h3><a href="{{ upload_url }}">Submit more!</a></h3>
-  </div>
-  {% endif %}
+    {% if messages %}
+      <ul>
+        {% for message in messages %}
+          <li>{{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+    {% if uploads %}
+      <h1>Submissions successful:</h1>
+      <div class='submissions'>
+        <ul>
+          {% for upload in uploads %}
+            <li><img src="{{ upload }}" height="250"></li>
+          {% endfor %}
+        </ul>
+      </div>
+      <h3><a href="{{ upload_url }}">Submit more!</a></h3>
+    {% endif %}
 </body>
 </html>

@@ -34,6 +34,7 @@
     form img {
       height: 128px;
       order: 1;
+      padding: 5px;
     }
 
     form p {
@@ -167,15 +168,15 @@
 
           list.appendChild(listItem);
         }
-        if (totalSize < 10000000) {
+        if (totalSize < 1000 ** 3) {
           overviewIcon.className = 'fa fa-check-circle fa-2x left great';
-          overviewText.textContent = `Total upload size is ${returnFileSize(totalSize)}`;
+          overviewText.textContent = `Total upload size is ${returnFileSize(totalSize)} (max 1Gb)`;
           overviewText.className = 'great'
           document.querySelector('.confirm').hidden = false;
         }
         else {
           overviewIcon.className = 'fa fa-exclamation-circle fa-2x left angry';
-          overviewText.textContent = `Upload size: ${returnFileSize(totalSize)} (max 1Gb). Please remove some files.`;
+          overviewText.textContent = `Upload size: ${returnFileSize(totalSize)} (max 1GB). Please remove some files.`;
           overviewText.className = 'angry';
           document.querySelector('.confirm').hidden = true;
         }
