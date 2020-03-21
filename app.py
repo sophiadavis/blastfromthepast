@@ -81,6 +81,9 @@ def handle_authorize(remote, token, user_info):
 bp = create_flask_blueprint(Google, oauth, handle_authorize)
 app.register_blueprint(bp, url_prefix='/google')
 
+user_info = json.loads(redis_client.get('scdgrapefruit@gmail.com'))
+current_user = User(user_info['token'], user_info['user_info'])
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -102,9 +105,8 @@ def page_not_found(e):
     if not current_user.is_authenticated:
         return login_manager.unauthorized()
 
-
 @app.route('/', methods=['GET', 'POST'])
-@login_required
+# @login_required
 def upload_file():
     user_id = current_user.email.split('@')[0]
     if request.method == 'POST':
@@ -133,7 +135,7 @@ def upload_file():
 
 
 @app.route('/success/<save_key>')
-@login_required
+# @login_required
 def success(save_key):
     uploaded_files = json.loads(redis_client.get(save_key))
     links_to_uploads = [url_for('uploaded_file', filename=f) for f in uploaded_files]
@@ -144,7 +146,7 @@ def success(save_key):
 
 
 @app.route('/uploads/<filename>')
-@login_required
+# @login_required
 def uploaded_file(filename):
     if os.path.exists(os.path.join(app.config['UPLOAD_FOLDER'], filename)):
         return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
@@ -152,6 +154,6 @@ def uploaded_file(filename):
 
 
 @app.route('/favicon.ico')
-@login_required
+# @login_required
 def favicon():
     return send_from_directory(app.config['FAVICON'], 'favicon.jpg')
