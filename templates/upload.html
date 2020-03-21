@@ -31,6 +31,13 @@
       border: 1px solid black;
     }
 
+    form li.matches {
+      overflow-x: auto;
+      white-space: nowrap;
+      padding-right: 10px;
+      border: 2px dotted green;
+    }
+
     form img {
       height: 128px;
       order: 1;
@@ -128,7 +135,8 @@
         preview.appendChild(list);
 
         for (const file of curFiles) {
-          const listItem = document.createElement('li');
+          const uploadDetails = document.createElement('li');
+          const potentialDuplicates = document.createElement('li');
           const para = document.createElement('p');
 
           if (validFileType(file)) {
@@ -159,15 +167,44 @@
                 input.dispatchEvent(new Event('change'));
             }
 
-            listItem.appendChild(image);
-            listItem.appendChild(remove);
-            listItem.appendChild(para);
+            const request = new Request(`/check`, 
+              {method: 'POST', body: `{"body": "${getHex(file)}"}`});
+            fetch(request)
+                .then(response => {
+                  if (response.status === 200) {
+                    return response.json();
+                  } else {
+                    throw new Error('Something went wrong on api server!');
+                  }
+                })
+                .then(response => {
+                  const matches = response['matches'];
+                  // if nothing matches, .hidden = true?
+                  // otherwise, show potential duplicates, with scroll
+                  const similarWarning = document.createElement('div');
+                  similarWarning.textContent = 'Potentially similar: ';
+                  potentialDuplicates.appendChild(similarWarning);
+                  for (const match of matches) {
+                    const potential_duplicate = document.createElement('img');
+                    potential_duplicate.src = match;
+                    potentialDuplicates.appendChild(potential_duplicate);
+                    potentialDuplicates.className = 'matches';
+                  }
+                }).catch(error => {
+                  // TODO
+                  console.error(error);
+                });
+
+            uploadDetails.appendChild(image);
+            uploadDetails.appendChild(remove);
+            uploadDetails.appendChild(para);
           } else {
             para.textContent = `File name ${file.name}: Not a valid file type. Update your selection.`;
-            listItem.appendChild(para);
+            uploadDetails.appendChild(para);
           }
 
-          list.appendChild(listItem);
+          list.appendChild(uploadDetails);
+          list.appendChild(potentialDuplicates);
         }
         if (totalSize < 1000 ** 3) {
           overviewIcon.className = 'fa fa-check-circle fa-2x left great';
@@ -205,7 +242,19 @@
         return (number/1048576).toFixed(1) + 'MB';
       }
     }
+
+    function arrayBufferAsHex(buffer) {
+      return Array.prototype.map.call(new Uint8Array(buffer), x => ('00' + x.toString(16)).slice(-2)).join('');
+    }
+
+    function getHex(file) {
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        var binary = event.target.result;
+        var hex = arrayBufferAsHex(binary);
+      };
+      return reader.readAsArrayBuffer(file);
+    }
   </script>
 </body>
 </html>
-

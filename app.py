@@ -145,6 +145,13 @@ def success(save_key):
                            uploads=links_to_uploads, upload_url=upload_url)
 
 
+@app.route('/check', methods=['POST'])
+# @login_required
+def check_perceptually_similar():
+    files = ['IMG_5869.jpeg', '5CDF507B-41E8-46AE-82CF-D5BE49AA1648.jpeg', '100_1448.JPG', '100_1614.JPG']
+    return json.dumps({'matches': [url_for('uploaded_file', filename=f) for f in files]})
+
+
 @app.route('/uploads/<filename>')
 # @login_required
 def uploaded_file(filename):
