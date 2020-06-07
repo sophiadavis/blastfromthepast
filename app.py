@@ -4,8 +4,14 @@ from flask import Flask, flash, abort, get_flashed_messages, request, redirect, 
 from flask_login import LoginManager, login_user, login_required, current_user
 import logging
 from loginpass import Google, create_flask_blueprint
+import hashlib
+import imagehash
+import io
 import json
 import os
+from PIL import Image
+import psycopg2
+from psycopg2 import extras
 from werkzeug.utils import secure_filename
 import redis
 import time
@@ -105,6 +111,48 @@ def page_not_found(e):
     if not current_user.is_authenticated:
         return login_manager.unauthorized()
 
+def register_files(saved_files, user_id):
+    to_insert = []
+    for saved_file in saved_files:
+        path = os.path.join(UPLOAD_FOLDER, saved_file)
+        image = Image.open(path)
+        with open(path, 'rb') as f:
+            md5 = hashlib.md5(f.read()).hexdigest()
+        try:
+            thumbpath = os.path.join(THUMB_FOLDER2, f'thumb-{saved_file}')
+            image.thumbnail((128, 128), Image.ANTIALIAS)
+            image.save(thumbpath, "JPEG")
+            app.logger.info("Saved thumbnail to '%s'", path)
+        except IOError as e:
+            app.logger.error("Cannot create thumbnail for '%s', %s", path, e)
+        to_insert.append((saved_file, 
+                                None, thumbpath, md5, 
+                                _to_bitstring(imagehash.phash(image)), 
+                                _to_bitstring(imagehash.dhash(image)), 
+                                _to_bitstring(imagehash.average_hash(image)), 
+                                user_id, datetime.date.today(), BLAST))
+    
+
+    app.logger.info('Inserting %s entries', len(to_insert))
+    with psycopg2.connect(**DBPARAMS) as conn:
+        with conn.cursor(cursor_factory=extras.DictCursor) as cursor:
+            cursor.executemany(f"""
+                INSERT INTO {PHOTOS_TABLE} (         
+                    name,       
+                    sent_date, 
+                    thumb_path,       
+                    md5,     
+                    phash,      
+                    dhash,      
+                    ahash,     
+                    upload_by,  
+                    upload_date,
+                    blast
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                """, to_insert)
+    app.logger.info('Inserted %s entries', len(to_insert))
+
+
 @app.route('/', methods=['GET', 'POST'])
 # @login_required
 def upload_file():
@@ -118,7 +166,7 @@ def upload_file():
                     app.logger.info(f'{user_id}: submitted {photo.filename}')
                     filename = secure_filename(photo.filename)
                     uniquified_name = _get_uniquified_name(filename, user_id)
-                    photo.save(os.path.join(app.config['UPLOAD_FOLDER'], uniquified_name))
+                    photo.save(os.path.join(UPLOAD_FOLDER, uniquified_name))
                     app.logger.info(f'{user_id}: submitted {photo.filename} ; save successful')
                     saved_files.append(uniquified_name)
                 except Exception as e:
@@ -130,6 +178,7 @@ def upload_file():
         save_key = f'{user_id}-{time.time()}'
         redis_client.set(save_key, json.dumps([f for f in saved_files]))
         redis_client.expire(save_key, 60*60*24*7)
+        register_files(saved_files, user_id)
         return redirect(url_for('success', save_key=save_key))
     return render_template('upload.html', font_awesome_cdn=app.config['FONT_AWESOME_CDN'])
 
@@ -139,24 +188,77 @@ def upload_file():
 def success(save_key):
     uploaded_files = json.loads(redis_client.get(save_key))
     links_to_uploads = [url_for('uploaded_file', filename=f) for f in uploaded_files]
-    app.logger.info(links_to_uploads)
+    app.logger.debug(links_to_uploads)
     upload_url = url_for('upload_file')
     return render_template('success.html', messages=_filter_flash(get_flashed_messages()),
                            uploads=links_to_uploads, upload_url=upload_url)
 
 
+def _to_bitstring(imagehash_obj):
+    return ''.join(str(b) for b in 1 * imagehash_obj.hash.flatten())
+
+
 @app.route('/check', methods=['POST'])
 # @login_required
 def check_perceptually_similar():
-    files = ['IMG_5869.jpeg', '5CDF507B-41E8-46AE-82CF-D5BE49AA1648.jpeg', '100_1448.JPG', '100_1614.JPG']
-    return json.dumps({'matches': [url_for('uploaded_file', filename=f) for f in files]})
+    app.logger.info('Checking %s upload against previous uploads', current_user.email.split('@')[0])
+    content = request.get_json(force=True)['file_content']
+    app.logger.info('Getting content')
+    bytes_ = bytes.fromhex(content)
+    app.logger.info('Getting bytes')
+    similar_files = []
+
+    image = Image.open(io.BytesIO(bytes_))
+    perceptual_hashes = {
+        'dhash': _to_bitstring(imagehash.dhash(image)),
+        'ahash': _to_bitstring(imagehash.average_hash(image)),
+        'phash': _to_bitstring(imagehash.phash(image)),
+    }
+
+    with psycopg2.connect(**DBPARAMS) as conn:
+        with conn.cursor(cursor_factory=extras.DictCursor) as cursor:
+            for colname in perceptual_hashes.keys():
+                app.logger.info('Finding photos with similar %s', colname)
+                hash_value = perceptual_hashes[colname]
+                # sort by hamming_distance == the number of bits in two hashes that are different
+                # length(replace((dhash # %s::bit(64))::text, '0', ''))
+                # get xor of the hashes: dhash # %s::bit(64)
+                # convert to text, remove the 0's -- these bits are the same
+                # count remaining 1's
+                cursor.execute(f"""
+                    select 
+                        name, thumb_path, 
+                        length(replace(({colname} # %s::bit(64))::text, '0', '')) as hamming_distance 
+                    from {PHOTOS_TABLE} 
+                    where 
+                        blast = %s and 
+                        length(replace(({colname} # %s::bit(64))::text, '0', '')) < 15
+                """, (hash_value, BLAST, hash_value,))
+                results = list(cursor.fetchall())
+                app.logger.info('Submitted data %s: %s -- matched %s existing photos', colname, hash_value, len(results))
+                for res in results:
+                    app.logger.info('%s: %s -- distance of %s', res['name'], colname, res['hamming_distance'])
+                similar_files.extend(results)
+    unique_files = set((f['name'], f['thumb_path'], f['hamming_distance'],) for f in similar_files)
+    return json.dumps({
+        'similar': [
+            url_for('uploaded_file', 
+                filename=f[0], 
+                thumb_path=f[1]
+            )
+            for f in sorted(unique_files, key=lambda f: f[2])
+        ][:5]
+    })
 
 
 @app.route('/uploads/<filename>')
 # @login_required
 def uploaded_file(filename):
-    if os.path.exists(os.path.join(app.config['UPLOAD_FOLDER'], filename)):
-        return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+    thumb_path = request.args.get('thumb_path', None) 
+    if thumb_path:
+        return send_from_directory(THUMB_FOLDER, os.path.basename(thumb_path))
+    elif os.path.exists(os.path.join(UPLOAD_FOLDER, filename)):
+        return send_from_directory(UPLOAD_FOLDER, filename)
     return abort(404)
 
 

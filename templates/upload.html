@@ -166,34 +166,46 @@
                 input.files = upload.files;
                 input.dispatchEvent(new Event('change'));
             }
+            const reader = new FileReader();
+            reader.onload = function(event) {
+              var binary = event.target.result;
+              var hex = arrayBufferAsHex(binary);
 
-            const request = new Request(`/check`, 
-              {method: 'POST', body: `{"body": "${getHex(file)}"}`});
-            fetch(request)
-                .then(response => {
-                  if (response.status === 200) {
-                    return response.json();
-                  } else {
-                    throw new Error('Something went wrong on api server!');
-                  }
-                })
-                .then(response => {
-                  const matches = response['matches'];
-                  // if nothing matches, .hidden = true?
-                  // otherwise, show potential duplicates, with scroll
-                  const similarWarning = document.createElement('div');
-                  similarWarning.textContent = 'Potentially similar: ';
-                  potentialDuplicates.appendChild(similarWarning);
-                  for (const match of matches) {
-                    const potential_duplicate = document.createElement('img');
-                    potential_duplicate.src = match;
-                    potentialDuplicates.appendChild(potential_duplicate);
-                    potentialDuplicates.className = 'matches';
-                  }
-                }).catch(error => {
-                  // TODO
-                  console.error(error);
-                });
+              const json_data = `{"file_content": "${hex}"}`;
+              console.log('Posting file content')
+              const request = new Request(`/check`,
+              {method: 'POST', body: json_data});
+              fetch(request)
+                  .then(response => {
+                    if (response.status === 200) {
+                      return response.json();
+                    } else {
+                      throw new Error('Something went wrong on api server!');
+                    }
+                  })
+                  .then(response => {
+                    const matches = response['similar'];
+                    const similarWarning = document.createElement('div');
+                    if(matches.length === 0) {
+                      similarWarning.textContent = 'No previously uploaded similar files';
+                      potentialDuplicates.appendChild(similarWarning);
+                    }
+                    else {
+                      similarWarning.textContent = 'Similar uploads: ';
+                      potentialDuplicates.appendChild(similarWarning);
+                      for (const match of matches) {
+                        const potential_duplicate = document.createElement('img');
+                        potential_duplicate.src = match;
+                        potentialDuplicates.appendChild(potential_duplicate);
+                        potentialDuplicates.className = 'matches';
+                      }
+                    }
+                  }).catch(error => {
+                    // TODO
+                    console.error(error);
+                  });
+              };
+            reader.readAsArrayBuffer(file);          
 
             uploadDetails.appendChild(image);
             uploadDetails.appendChild(remove);
@@ -242,18 +254,8 @@
         return (number/1048576).toFixed(1) + 'MB';
       }
     }
-
     function arrayBufferAsHex(buffer) {
       return Array.prototype.map.call(new Uint8Array(buffer), x => ('00' + x.toString(16)).slice(-2)).join('');
-    }
-
-    function getHex(file) {
-      const reader = new FileReader();
-      reader.onload = function(event) {
-        var binary = event.target.result;
-        var hex = arrayBufferAsHex(binary);
-      };
-      return reader.readAsArrayBuffer(file);
     }
   </script>
 </body>
