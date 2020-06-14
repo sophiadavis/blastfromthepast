@@ -285,8 +285,7 @@
         (accumulate, item) => accumulate + (item.hidden ? 0 : item.file.size), 0
       );
 
-      // 1000 ** 3
-      if (totalSize < 2000000) {
+      if (totalSize < 1000 ** 3) {
         overviewIcon.className = 'fa fa-check-circle fa-2x left great';
         overviewText.textContent = `Total upload size is ${returnFileSize(totalSize)} (max 1Gb)`;
         overviewText.className = 'great'
