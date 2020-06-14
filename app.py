@@ -1,4 +1,4 @@
-from authlib.flask.client import OAuth
+from authlib.integrations.flask_client import OAuth
 import datetime
 from flask import Flask, flash, abort, get_flashed_messages, request, redirect, render_template, url_for, send_from_directory
 from flask_login import LoginManager, login_user, login_required, current_user
@@ -88,7 +88,7 @@ def handle_authorize(remote, token, user_info):
     return abort(401)
 
 
-bp = create_flask_blueprint(Google, oauth, handle_authorize)
+bp = create_flask_blueprint([Google], oauth, handle_authorize)
 app.register_blueprint(bp, url_prefix='/google')
 
 user_info = json.loads(redis_client.get('scdgrapefruit@gmail.com'))
