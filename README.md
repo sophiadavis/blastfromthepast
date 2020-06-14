@@ -62,3 +62,9 @@ subject = Blast from the Past!
 [app]
 upload_url = your-domain-hosting-the-upload-server.com
 ```
+
+##### Helpful links:
+Here are some tutorials/docs that I made heavy copy-paste use of:
+* Upload logic: http://flask.pocoo.org/docs/1.0/patterns/fileuploads/
+* Authorization logic: https://github.com/authlib/loginpass/tree/master/flask_example
+* OAuth setup: https://stackoverflow.com/questions/16693653/how-to-add-or-change-return-uri-in-google-console-for-oauth2

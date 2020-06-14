@@ -1,4 +1,5 @@
 from authlib.flask.client import OAuth
+from collections import namedtuple
 import datetime
 from flask import Flask, flash, abort, get_flashed_messages, request, redirect, render_template, url_for, send_from_directory
 from flask_login import LoginManager, login_user, login_required, current_user
@@ -16,9 +17,6 @@ from werkzeug.utils import secure_filename
 import redis
 import time
 
-import sys
-sys.stdout = sys.stderr
-
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
                     filename=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'log', f'{datetime.date.today()}-uploadserver.log'),
@@ -31,17 +29,12 @@ app.config.from_pyfile('flask_config.py')
 
 
 login_manager = LoginManager()
-# https://stackoverflow.com/questions/16693653/how-to-add-or-change-return-uri-in-google-console-for-oauth2
 login_manager.login_view = '/google/login'
 login_manager.init_app(app)
 
 
 oauth = OAuth(app, {})
 redis_client = redis.Redis()
-
-
-# Upload logic: http://flask.pocoo.org/docs/1.0/patterns/fileuploads/
-# Authorization logic: https://github.com/authlib/loginpass/tree/master/flask_example
 
 
 class User:
