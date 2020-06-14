@@ -21,21 +21,31 @@
       padding-left: 0;
     }
 
-    form li, div > p {
+    div > p {
       background: #eee;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    form li {
+      background: #eee;
       margin-bottom: 10px;
       list-style-type: none;
       border: 1px solid black;
     }
 
-    form li.matches {
+    form div.details {
+      align-items: center;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      padding-right: 10px;
+    }
+
+    form div.matches {
+      text-align: center;
       overflow-x: auto;
       white-space: nowrap;
-      padding-right: 10px;
-      border: 2px dotted green;
+      padding-left: 10px;
     }
 
     form img {
@@ -80,10 +90,30 @@
     .left {
       float: left;
       padding-right: 10px;
+      padding-left: 10px;
     }
 
     .fa-trash-o {
       padding-left: 25px;
+    }
+
+    /* https://codepen.io/mandelid/pen/vwKoe?editors=1111 */
+    #loading {
+      display: inline-block;
+      width: 50px;
+      height: 50px;
+      border: 3px solid rgba(255,255,255,.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 1s ease-in-out infinite;
+      -webkit-animation: spin 1s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      to { -webkit-transform: rotate(360deg); }
+    }
+    @-webkit-keyframes spin {
+      to { -webkit-transform: rotate(360deg); }
     }
   </style>
   <script src="{{ font_awesome_cdn }}"></script>
@@ -93,55 +123,61 @@
     <h1>Upload new photos</h1>
     <div class="select">
       <label for="image_uploads">Select images</label>
-      <input type="file" id="image_uploads" name="image_uploads" accept="image/*, application/pdf" multiple>
+      <input type="file" id="image_uploads" name="image_uploads" accept="image/*, application/pdf" multiple hidden="true">
     </div>
     <div class="confirm" hidden="true">
       <label for="submit">Click to upload!</label>
       <input type="submit" id="submit" hidden="true">
     </div>
     <div class="preview">
+      <div id="overview" hidden="true">
+        <span id="overview-icon"></span>
+        <p id="overview-text"></p>
+      </div>
+      <ol class="images" hidden="true">
+      </ol>
     </div>
   </form>
   <script>
     const input = document.querySelector('input');
-    const preview = document.querySelector('.preview');
+    
+    const finalUploads = [];
 
     input.style.opacity = 0;
 
-    input.addEventListener('change', updateImageDisplay);
+    input.addEventListener('input', renderImageDisplay);
 
-    function updateImageDisplay() {
-      while(preview.firstChild) {
-        preview.removeChild(preview.firstChild);
+    function renderImageDisplay() {
+      finalUploads.length = 0; // reset uploads
+      for (let i = 0, numFiles = input.files.length; i < numFiles; i++) {
+        const file = input.files[i];
+        finalUploads.push({'file': file, 'hidden': false, 'id': `image${i}`});
       }
 
-      const curFiles = input.files;
-
-      const overview = document.createDocumentFragment();
-      const overviewIcon = document.createElement('span');
-      overview.appendChild(overviewIcon);
-      const overviewText = document.createElement('p');
-      overview.appendChild(overviewText);
-
-      preview.appendChild(overview);
-      if(curFiles.length === 0) {
+      if(finalUploads.length === 0) {
         document.querySelector('.select').hidden = false;
-        overviewText.textContent = 'No files currently selected for upload';
         document.querySelector('.confirm').hidden = true;
       } else {
         document.querySelector('.select').hidden = true;
-        let totalSize = 0;
-        const list = document.createElement('ol');
-        preview.appendChild(list);
+        const images = document.querySelector('.images');
+        images.hidden = false;
 
-        for (const file of curFiles) {
-          const uploadDetails = document.createElement('li');
-          const potentialDuplicates = document.createElement('li');
+        for (const fileData of finalUploads) {
+          const file = fileData.file;
+          const uploadContainer = document.createElement('li');
+          uploadContainer.className = fileData.id;
+          const uploadDetails = document.createElement('div')
+          uploadDetails.className = 'details';
+          const potentialDuplicates = document.createElement('div');
+          potentialDuplicates.id = 'loading';
           const para = document.createElement('p');
 
-          if (validFileType(file)) {
-            totalSize += file.size;
+          images.appendChild(uploadContainer);
+          uploadContainer.appendChild(uploadDetails);
+          uploadContainer.appendChild(document.createElement('hr'));
+          uploadContainer.appendChild(potentialDuplicates);
 
+          if (validFileType(file)) {
             para.textContent = `${file.name} (${returnFileSize(file.size)})`;
             const image = document.createElement('img');
             image.src = URL.createObjectURL(file);
@@ -157,14 +193,12 @@
             remove.addEventListener('click', removeFromSelection);
 
             function removeFromSelection() {
-                const upload = new DataTransfer();
-                for (const f of curFiles) {
-                  if (f.name != file.name) {
-                    upload.items.add(f);
+              for (const fileData of finalUploads) {
+                  if (fileData.file.name === file.name) {
+                    fileData.hidden = true;
                   }
                 }
-                input.files = upload.files;
-                input.dispatchEvent(new Event('change'));
+                updateImageDisplay();
             }
             const reader = new FileReader();
             reader.onload = function(event) {
@@ -172,7 +206,6 @@
               var hex = arrayBufferAsHex(binary);
 
               const json_data = `{"file_content": "${hex}"}`;
-              console.log('Posting file content')
               const request = new Request(`/check`,
               {method: 'POST', body: json_data});
               fetch(request)
@@ -186,6 +219,9 @@
                   .then(response => {
                     const matches = response['similar'];
                     const similarWarning = document.createElement('div');
+                    potentialDuplicates.className = 'matches';
+                    potentialDuplicates.id = ''; // stop css loading spinner
+                    potentialDuplicates.textContent = '';
                     if(matches.length === 0) {
                       similarWarning.textContent = 'No previously uploaded similar files';
                       potentialDuplicates.appendChild(similarWarning);
@@ -197,7 +233,6 @@
                         const potential_duplicate = document.createElement('img');
                         potential_duplicate.src = match;
                         potentialDuplicates.appendChild(potential_duplicate);
-                        potentialDuplicates.className = 'matches';
                       }
                     }
                   }).catch(error => {
@@ -214,23 +249,56 @@
             para.textContent = `File name ${file.name}: Not a valid file type. Update your selection.`;
             uploadDetails.appendChild(para);
           }
-
-          list.appendChild(uploadDetails);
-          list.appendChild(potentialDuplicates);
         }
-        if (totalSize < 1000 ** 3) {
-          overviewIcon.className = 'fa fa-check-circle fa-2x left great';
-          overviewText.textContent = `Total upload size is ${returnFileSize(totalSize)} (max 1Gb)`;
-          overviewText.className = 'great'
-          document.querySelector('.confirm').hidden = false;
-        }
-        else {
-          overviewIcon.className = 'fa fa-exclamation-circle fa-2x left angry';
-          overviewText.textContent = `Upload size: ${returnFileSize(totalSize)} (max 1GB). Please remove some files.`;
-          overviewText.className = 'angry';
-          document.querySelector('.confirm').hidden = true;
-        }
+        updateSizeWarning();
       }
+    }
+
+    function updateImageDisplay() {
+      const upload = new DataTransfer();
+      
+      for (const fileData of finalUploads) {
+          if (fileData.hidden) {
+            for (const image of document.querySelectorAll(`li.${fileData.id}`)){
+              image.hidden = true;
+            }
+          }
+          else {
+            upload.items.add(fileData.file);
+          }
+      }
+      input.files = upload.files;
+
+      updateSizeWarning();
+
+      if (input.files.length === 0) {
+        document.querySelector('#overview').hidden = true;
+        input.dispatchEvent(new Event('input'));
+      }
+    }
+
+    function updateSizeWarning() {
+      const overviewIcon = document.querySelector('#overview-icon');
+      const overviewText = document.querySelector('#overview-text');
+
+      const totalSize = finalUploads.reduce(
+        (accumulate, item) => accumulate + (item.hidden ? 0 : item.file.size), 0
+      );
+
+      // 1000 ** 3
+      if (totalSize < 2000000) {
+        overviewIcon.className = 'fa fa-check-circle fa-2x left great';
+        overviewText.textContent = `Total upload size is ${returnFileSize(totalSize)} (max 1Gb)`;
+        overviewText.className = 'great'
+        document.querySelector('.confirm').hidden = false;
+      }
+      else {
+        overviewIcon.className = 'fa fa-exclamation-circle fa-2x left angry';
+        overviewText.textContent = `Upload size: ${returnFileSize(totalSize)} (max 1GB). Please remove some files.`;
+        overviewText.className = 'angry';
+        document.querySelector('.confirm').hidden = true;
+      }
+      document.querySelector('#overview').hidden = false;
     }
 
     const fileTypes = [

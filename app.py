@@ -1,5 +1,4 @@
 from authlib.flask.client import OAuth
-from collections import namedtuple
 import datetime
 from flask import Flask, flash, abort, get_flashed_messages, request, redirect, render_template, url_for, send_from_directory
 from flask_login import LoginManager, login_user, login_required, current_user
@@ -26,6 +25,18 @@ ALLOWED_EXTENSIONS = set(['pdf', 'png', 'jpg', 'jpeg', 'pjpeg'])
 
 app = Flask(__name__)
 app.config.from_pyfile('flask_config.py')
+
+UPLOAD_FOLDER = app.config['UPLOAD_FOLDER']
+THUMB_FOLDER = app.config['THUMB_FOLDER']
+
+BLAST = app.config['BLAST']
+DBPARAMS = {
+    'host': app.config['DBPARAMS_HOST'],
+    'dbname': app.config['DBPARAMS_DBNAME'],
+    'user': app.config['DBPARAMS_USER'],
+    'password': app.config['DBPARAMS_PASSWORD'],
+}
+PHOTOS_TABLE = app.config['DBPARAMS_TABLE']
 
 
 login_manager = LoginManager()
@@ -112,7 +123,7 @@ def register_files(saved_files, user_id):
         with open(path, 'rb') as f:
             md5 = hashlib.md5(f.read()).hexdigest()
         try:
-            thumbpath = os.path.join(THUMB_FOLDER2, f'thumb-{saved_file}')
+            thumbpath = os.path.join(THUMB_FOLDER, f'thumb-{saved_file}')
             image.thumbnail((128, 128), Image.ANTIALIAS)
             image.save(thumbpath, "JPEG")
             app.logger.info("Saved thumbnail to '%s'", path)
@@ -147,7 +158,7 @@ def register_files(saved_files, user_id):
 
 
 @app.route('/', methods=['GET', 'POST'])
-# @login_required
+@login_required
 def upload_file():
     user_id = current_user.email.split('@')[0]
     if request.method == 'POST':
@@ -177,7 +188,7 @@ def upload_file():
 
 
 @app.route('/success/<save_key>')
-# @login_required
+@login_required
 def success(save_key):
     uploaded_files = json.loads(redis_client.get(save_key))
     links_to_uploads = [url_for('uploaded_file', filename=f) for f in uploaded_files]
@@ -192,7 +203,7 @@ def _to_bitstring(imagehash_obj):
 
 
 @app.route('/check', methods=['POST'])
-# @login_required
+@login_required
 def check_perceptually_similar():
     app.logger.info('Checking %s upload against previous uploads', current_user.email.split('@')[0])
     content = request.get_json(force=True)['file_content']
@@ -245,7 +256,7 @@ def check_perceptually_similar():
 
 
 @app.route('/uploads/<filename>')
-# @login_required
+@login_required
 def uploaded_file(filename):
     thumb_path = request.args.get('thumb_path', None) 
     if thumb_path:
@@ -256,6 +267,6 @@ def uploaded_file(filename):
 
 
 @app.route('/favicon.ico')
-# @login_required
+@login_required
 def favicon():
     return send_from_directory(app.config['FAVICON'], 'favicon.jpg')
