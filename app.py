@@ -44,7 +44,7 @@ login_manager.login_view = '/google/login'
 login_manager.init_app(app)
 
 
-oauth = OAuth(app, {})
+oauth = OAuth(app)
 redis_client = redis.Redis()
 
 
@@ -89,10 +89,7 @@ def handle_authorize(remote, token, user_info):
 
 
 bp = create_flask_blueprint([Google], oauth, handle_authorize)
-app.register_blueprint(bp, url_prefix='/google')
-
-user_info = json.loads(redis_client.get('scdgrapefruit@gmail.com'))
-current_user = User(user_info['token'], user_info['user_info'])
+app.register_blueprint(bp, url_prefix='')
 
 
 @login_manager.user_loader
