@@ -40,7 +40,7 @@ PHOTOS_TABLE = app.config['DBPARAMS_TABLE']
 
 
 login_manager = LoginManager()
-login_manager.login_view = '/google/login'
+login_manager.login_view = '/login/google'
 login_manager.init_app(app)
 
 
