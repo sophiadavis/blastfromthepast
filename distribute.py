@@ -37,7 +37,6 @@ EMAIL_HTML_BODY = Template("""
   <head></head>
   <body style="background-color:steelblue; font-family:Courier New, monospace">
     <h1>Here is your photo blast of the day!</h1>
-    <div style="font-size:50px;color:red;font-weight:bold">{{ warning }}</div>
     <h3>Go to <a href="{{ url }}/">{{ url }}</a> to submit more pictures!</h3>
   </body>
 </html>
@@ -149,11 +148,12 @@ if __name__ == "__main__":
     app_name = config['google_api']['app_name']
 
     pictures = os.listdir(upload_dir)
-    warning = ''
-    if len(pictures) < 3:
-        warning = f'Warning: only {len(pictures)} unsent photo(s) remaining! Please upload more!'
+    if pictures:
+        picture_path = os.path.join(upload_dir, random.choice(pictures))
+    else:
+        pictures = os.listdir(sent_images_dir)
+        picture_path = os.path.join(sent_images_dir, random.choice(pictures))
 
-    picture_path = os.path.join(upload_dir, random.choice(pictures))
     if args.photo:
         assert os.path.exists(args.photo), f'{args.photo} does not point to a file.'
         picture_path = args.photo
@@ -162,7 +162,7 @@ if __name__ == "__main__":
     service = get_service(app_name)
 
     logger.info(f"Creating email for {recipients}")
-    html_body = EMAIL_HTML_BODY.render(url=upload_url, warning=warning)
+    html_body = EMAIL_HTML_BODY.render(url=upload_url)
     msg = create_message_with_image_attachment(sender_email, recipients, subject, picture_path, html_body)
 
     logger.info("Sending email...")
